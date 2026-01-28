@@ -96,8 +96,9 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
         <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-popIn">
           <div className="text-center mb-8">
-            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">E</div>
-            <h1 className="text-2xl font-bold text-slate-800">EquiFlow 登入</h1>
+            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">全</div>
+            <h1 className="text-2xl font-bold text-slate-800">備品租借系統</h1>
+            <p className="text-slate-400 text-sm mt-1">營運訓練處資產管理</p>
           </div>
           {loginStep === 'select' ? (
             <div className="space-y-3">
@@ -133,7 +134,8 @@ const App: React.FC = () => {
         ))}
       </div>
 
-      {activeTab === 'inventory' && <InventoryView items={items} reservations={reservations} onReserve={(ids) => { setSelectedItemsForBooking(items.filter(i => ids.includes(i.id))); setIsBookingModalOpen(true); }} />}
+      {/* Fix: Line 137 - Added 'item' to the filter callback argument to resolve missing identifier and type errors */}
+      {activeTab === 'inventory' && <InventoryView items={items} reservations={reservations} onReserve={(ids) => { setSelectedItemsForBooking(items.filter(item => ids.includes(item.id))); setIsBookingModalOpen(true); }} />}
       {activeTab === 'my-bookings' && <MyBookingsView reservations={reservations.filter(r => r.userId === currentUser.id)} items={items} onCancel={setCancelTargetId} onReturnInitiate={setActiveReturnId} onBrowse={() => setActiveTab('inventory')} />}
       
       {activeTab.startsWith('admin-') && currentUser.role === 'admin' && (
