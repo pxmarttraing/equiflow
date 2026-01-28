@@ -22,8 +22,13 @@ jobs:
         with:
           node-version: 20
 
+      - name: Clean environment
+        run: |
+          rm -f package-lock.json
+          npm cache clean --force
+
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install
 
       - name: Build
         run: npm run build
