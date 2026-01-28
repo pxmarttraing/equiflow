@@ -44,6 +44,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editUserName, setEditUserName] = useState('');
   const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserRole, setEditUserRole] = useState<'employee' | 'admin'>('employee');
 
   const [resetSuccessId, setResetSuccessId] = useState<string | null>(null);
 
@@ -65,11 +66,14 @@ const AdminView: React.FC<AdminViewProps> = ({
     setEditingUserId(user.id);
     setEditUserName(user.name);
     setEditUserEmail(user.email || '');
+    setEditUserRole(user.role);
   };
 
   const saveUserEdit = () => {
     if (editingUserId && editUserName.trim()) {
+      // 同時更新基本資料與權限角色
       onUpdateUserName(editingUserId, editUserName.trim(), editUserEmail.trim());
+      onUpdateUserRole(editingUserId, editUserRole);
       setEditingUserId(null);
     }
   };
@@ -230,7 +234,7 @@ const AdminView: React.FC<AdminViewProps> = ({
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">同仁識別</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">權限維護</th>
+                  <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">權限與管理</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -240,9 +244,15 @@ const AdminView: React.FC<AdminViewProps> = ({
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm shrink-0">{user.name.charAt(0)}</div>
                         {editingUserId === user.id ? (
-                          <div className="flex flex-col gap-2">
-                            <input className="border rounded-lg px-2 py-1 text-sm font-bold" value={editUserName} onChange={(e) => setEditUserName(e.target.value)} />
-                            <input className="border rounded-lg px-2 py-1 text-xs text-slate-400" value={editUserEmail} onChange={(e) => setEditUserEmail(e.target.value)} />
+                          <div className="flex flex-col gap-2 flex-1">
+                            <div className="flex gap-2">
+                              <input className="border rounded-lg px-2 py-1 text-sm font-bold flex-1" value={editUserName} onChange={(e) => setEditUserName(e.target.value)} placeholder="姓名" />
+                              <select className="border rounded-lg px-2 py-1 text-xs font-bold" value={editUserRole} onChange={(e) => setEditUserRole(e.target.value as any)}>
+                                <option value="employee">一般同仁</option>
+                                <option value="admin">管理員</option>
+                              </select>
+                            </div>
+                            <input className="border rounded-lg px-2 py-1 text-xs text-slate-400" value={editUserEmail} onChange={(e) => setEditUserEmail(e.target.value)} placeholder="Email" />
                           </div>
                         ) : (
                           <div>
