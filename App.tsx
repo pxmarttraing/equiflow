@@ -32,7 +32,11 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [categories, setCategories] = useState<string[]>(['Laptops', 'Tablets', 'Accessories', 'Monitors', 'Audio', 'Furniture', 'Cameras']);
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('equiflow_categories');
+    return saved ? JSON.parse(saved) : ['Laptops', 'Tablets', 'Accessories', 'Monitors', 'Audio', 'Furniture', 'Cameras'];
+  });
+
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -57,6 +61,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('equiflow_users', JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem('equiflow_reservations', JSON.stringify(reservations)); }, [reservations]);
   useEffect(() => { localStorage.setItem('equiflow_items', JSON.stringify(items)); }, [items]);
+  useEffect(() => { localStorage.setItem('equiflow_categories', JSON.stringify(categories)); }, [categories]);
 
   useEffect(() => {
     const updateStates = () => {
@@ -144,7 +149,19 @@ const App: React.FC = () => {
           onAddItem={(name, cat, specs) => setItems(prev => [...prev, { id: 'it'+Date.now(), name, category: cat, status: ItemStatus.AVAILABLE, specifications: specs }])} 
           onDeleteItem={(id) => setItems(prev => prev.filter(i => i.id !== id))} 
           onUpdateItem={(id, name, specs, cat) => setItems(prev => prev.map(i => i.id === id ? { ...i, name, specifications: specs, category: cat } : i))}
-          onAddCategory={() => {}} onDeleteCategory={() => {}}
+          onAddCategory={(cat) => {
+            if (!cat.trim()) return;
+            if (categories.includes(cat.trim())) {
+              addToast('分類已存在', 'info');
+              return;
+            }
+            setCategories(prev => [...prev, cat.trim()]);
+            addToast('已新增分類');
+          }} 
+          onDeleteCategory={(cat) => {
+            setCategories(prev => prev.filter(c => c !== cat));
+            addToast('已移除分類');
+          }}
           onAddUser={(name, role, email) => setUsers(prev => [...prev, { id: 'u'+Date.now(), name, role, email, password: '1234' }])}
           onDeleteUser={(id) => setUsers(prev => prev.filter(u => u.id !== id))}
           onUpdateUserRole={(id, role) => setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))}
