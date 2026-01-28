@@ -134,7 +134,6 @@ const App: React.FC = () => {
         ))}
       </div>
 
-      {/* Fix: Line 137 - Added 'item' to the filter callback argument to resolve missing identifier and type errors */}
       {activeTab === 'inventory' && <InventoryView items={items} reservations={reservations} onReserve={(ids) => { setSelectedItemsForBooking(items.filter(item => ids.includes(item.id))); setIsBookingModalOpen(true); }} />}
       {activeTab === 'my-bookings' && <MyBookingsView reservations={reservations.filter(r => r.userId === currentUser.id)} items={items} onCancel={setCancelTargetId} onReturnInitiate={setActiveReturnId} onBrowse={() => setActiveTab('inventory')} />}
       
@@ -148,7 +147,15 @@ const App: React.FC = () => {
           onAddCategory={() => {}} onDeleteCategory={() => {}}
           onAddUser={(name, role, email) => setUsers(prev => [...prev, { id: 'u'+Date.now(), name, role, email, password: '1234' }])}
           onDeleteUser={(id) => setUsers(prev => prev.filter(u => u.id !== id))}
-          onUpdateUserRole={() => {}} onUpdateUserName={() => {}} onResetUserPassword={() => {}}
+          onUpdateUserRole={(id, role) => setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))}
+          onUpdateUserName={(id, name, email) => {
+            setUsers(prev => prev.map(u => u.id === id ? { ...u, name, email } : u));
+            addToast('成員資料已更新');
+          }}
+          onResetUserPassword={(id) => {
+            setUsers(prev => prev.map(u => u.id === id ? { ...u, password: '1234' } : u));
+            addToast('密碼已重設為 1234');
+          }}
           onCancelReservation={setCancelTargetId}
         />
       )}
