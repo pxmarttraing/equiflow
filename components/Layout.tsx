@@ -26,8 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, curr
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       <aside className="w-full md:w-64 bg-white border-r border-slate-200 flex flex-col sticky top-0 h-auto md:h-screen z-40 shadow-sm">
         <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-          <div className="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold">E</div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">EquiFlow</h1>
+          <div className="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold">全</div>
+          <h1 className="text-lg font-bold text-slate-800 tracking-tight">營運訓練處</h1>
         </div>
         
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
