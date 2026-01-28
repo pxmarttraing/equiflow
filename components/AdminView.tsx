@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { EquipmentItem, ItemStatus, User, Reservation } from '../types';
+import { EquipmentItem, ItemStatus, User, Reservation, ReservationStatus } from '../types';
 import MyBookingsView from './MyBookingsView';
 
 interface AdminViewProps {
@@ -21,12 +21,12 @@ interface AdminViewProps {
   onUpdateUserName: (id: string, name: string, email: string) => void;
   onResetUserPassword: (id: string) => void;
   onCancelReservation: (id: string) => void;
-  onSendTestOverdue?: () => void;
+  onImportFullData?: (data: string) => void; // 新增導入功能
   activeTab: string;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  items, categories, users, allReservations, notifications, onClearNotifications, onAddItem, onDeleteItem, onUpdateItem, onAddCategory, onDeleteCategory, onAddUser, onDeleteUser, onUpdateUserRole, onUpdateUserName, onResetUserPassword, onCancelReservation, onSendTestOverdue, activeTab
+  items, categories, users, allReservations, notifications, onClearNotifications, onAddItem, onDeleteItem, onUpdateItem, onAddCategory, onDeleteCategory, onAddUser, onDeleteUser, onUpdateUserRole, onUpdateUserName, onResetUserPassword, onCancelReservation, onImportFullData, activeTab
 }) => {
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState(categories[0] || '');
@@ -47,8 +47,16 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [editUserRole, setEditUserRole] = useState<'employee' | 'admin'>('employee');
 
   const [resetSuccessId, setResetSuccessId] = useState<string | null>(null);
+  const [importText, setImportText] = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   const startEditingItem = (item: EquipmentItem) => {
+    // 檢查是否有預約紀錄
+    const hasHistory = allReservations.some(r => r.itemIds.includes(item.id));
+    if (hasHistory) {
+      alert("此備品已有預約歷史紀錄，為維護報表一致性，不可修改基本資料。");
+      return;
+    }
     setEditingItemId(item.id);
     setEditItemName(item.name);
     setEditItemSpecs(item.specifications || '');
@@ -71,19 +79,28 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const saveUserEdit = () => {
     if (editingUserId && editUserName.trim()) {
-      // 同時更新基本資料與權限角色
       onUpdateUserName(editingUserId, editUserName.trim(), editUserEmail.trim());
       onUpdateUserRole(editingUserId, editUserRole);
       setEditingUserId(null);
     }
   };
 
+  const handleExport = () => {
+    const fullData = {
+      users,
+      items,
+      reservations: allReservations,
+      categories
+    };
+    const dataStr = btoa(unescape(encodeURIComponent(JSON.stringify(fullData))));
+    navigator.clipboard.writeText(dataStr);
+    alert("系統數據已轉換為加密字串並複製到剪貼簿！請到另一台電腦貼上導入。");
+  };
+
   const handleResetAction = (id: string) => {
     onResetUserPassword(id);
     setResetSuccessId(id);
-    setTimeout(() => {
-      setResetSuccessId(null);
-    }, 3000);
+    setTimeout(() => { setResetSuccessId(null); }, 3000);
   };
 
   return (
@@ -97,7 +114,33 @@ const AdminView: React.FC<AdminViewProps> = ({
           </h2>
           <p className="text-slate-500 text-sm mt-1">管理員專區：控管公司資產與成員權限</p>
         </div>
+        
+        <div className="flex gap-2">
+          <button onClick={handleExport} className="text-xs font-bold bg-slate-100 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-200 transition-all">📤 導出數據備份</button>
+          <button onClick={() => setShowImport(!showImport)} className="text-xs font-bold bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-all">📥 導入數據恢復</button>
+        </div>
       </div>
+
+      {showImport && (
+        <div className="bg-indigo-600 p-6 rounded-2xl text-white animate-popIn">
+          <h4 className="font-bold mb-2">導入數據恢復 (同步至此瀏覽器)</h4>
+          <p className="text-xs opacity-80 mb-4">請貼上從另一台電腦「導出」的代碼。注意：這將會覆蓋此瀏覽器目前的所有資料。</p>
+          <div className="flex gap-2">
+            <input 
+              className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm outline-none placeholder:text-white/40" 
+              placeholder="在此貼上加密代碼..."
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+            />
+            <button 
+              onClick={() => { if(onImportFullData) onImportFullData(importText); setImportText(''); setShowImport(false); }}
+              className="bg-white text-indigo-600 font-bold px-6 py-2 rounded-xl text-sm shadow-xl"
+            >
+              開始導入
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'admin-items' && (
         <div className="space-y-8">
@@ -139,45 +182,56 @@ const AdminView: React.FC<AdminViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map(item => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      {editingItemId === item.id ? (
-                        <div className="space-y-2">
-                          <input className="w-full text-sm font-bold border rounded-lg px-2 py-1 outline-none" value={editItemName} onChange={(e) => setEditItemName(e.target.value)} />
-                          <input className="w-full text-xs border rounded-lg px-2 py-1 outline-none text-slate-500" value={editItemSpecs} onChange={(e) => setEditItemSpecs(e.target.value)} />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-800">{item.name}</span>
-                          <span className="text-xs text-slate-400 mt-0.5">{item.specifications || '無規格資料'}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingItemId === item.id ? (
-                        <select className="text-xs font-bold border rounded-lg px-2 py-1 outline-none" value={editItemCategory} onChange={(e) => setEditItemCategory(e.target.value)}>
-                          {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
-                      ) : (
-                        <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">{item.category}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {editingItemId === item.id ? (
-                        <div className="flex justify-end gap-2">
-                          <button onClick={saveItemEdit} className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">儲存</button>
-                          <button onClick={() => setEditingItemId(null)} className="text-xs font-bold text-slate-400 px-3 py-1.5 rounded-lg border border-slate-100">取消</button>
-                        </div>
-                      ) : (
-                        <div className="flex justify-end gap-3 items-center">
-                          <button onClick={() => startEditingItem(item)} className="text-xs font-bold text-indigo-500 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors">編輯</button>
-                          <button onClick={() => onDeleteItem(item.id)} className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${item.status === ItemStatus.BORROWED ? 'text-slate-300' : 'text-red-400 hover:bg-red-50'}`} disabled={item.status === ItemStatus.BORROWED}>移除</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {items.map(item => {
+                  const hasHistory = allReservations.some(r => r.itemIds.includes(item.id));
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        {editingItemId === item.id ? (
+                          <div className="space-y-2">
+                            <input className="w-full text-sm font-bold border rounded-lg px-2 py-1 outline-none" value={editItemName} onChange={(e) => setEditItemName(e.target.value)} />
+                            <input className="w-full text-xs border rounded-lg px-2 py-1 outline-none text-slate-500" value={editItemSpecs} onChange={(e) => setEditItemSpecs(e.target.value)} />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-800">{item.name}</span>
+                            <span className="text-xs text-slate-400 mt-0.5">{item.specifications || '無規格資料'}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {editingItemId === item.id ? (
+                          <select className="text-xs font-bold border rounded-lg px-2 py-1 outline-none" value={editItemCategory} onChange={(e) => setEditItemCategory(e.target.value)}>
+                            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          </select>
+                        ) : (
+                          <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">{item.category}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {editingItemId === item.id ? (
+                          <div className="flex justify-end gap-2">
+                            <button onClick={saveItemEdit} className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">儲存</button>
+                            <button onClick={() => setEditingItemId(null)} className="text-xs font-bold text-slate-400 px-3 py-1.5 rounded-lg border border-slate-100">取消</button>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end gap-3 items-center">
+                            {hasHistory ? (
+                              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-300">
+                                🔒 已有借用紀錄
+                              </div>
+                            ) : (
+                              <>
+                                <button onClick={() => startEditingItem(item)} className="text-xs font-bold text-indigo-500 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors">編輯</button>
+                                <button onClick={() => onDeleteItem(item.id)} className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors text-red-400 hover:bg-red-50`}>移除</button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -187,30 +241,6 @@ const AdminView: React.FC<AdminViewProps> = ({
       {activeTab === 'admin-bookings' && (
         <div className="space-y-12">
           <MyBookingsView reservations={allReservations} items={items} onCancel={onCancelReservation} onReturnInitiate={() => {}} onBrowse={() => {}} isAdminMode={true} />
-          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between bg-slate-50/50 gap-4">
-              <h3 className="text-lg font-bold text-slate-800">系統發送紀錄 (Email Logs)</h3>
-              <div className="flex gap-2">
-                {onSendTestOverdue && (
-                  <button onClick={onSendTestOverdue} className="text-xs font-bold bg-amber-500 text-white px-4 py-2 rounded-xl shadow-md hover:bg-amber-600 transition-all flex items-center gap-2">
-                    🚀 模擬發送逾期警告 (Emily)
-                  </button>
-                )}
-                {notifications.length > 0 && <button onClick={onClearNotifications} className="text-xs font-bold text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg">清空紀錄</button>}
-              </div>
-            </div>
-            <div className="p-4 bg-white max-h-[400px] overflow-y-auto space-y-2">
-              {notifications.length === 0 ? <p className="text-center py-10 text-slate-400 italic">無發送信件紀錄</p> : notifications.map((n, i) => (
-                <div key={i} className={`p-4 rounded-xl border ${n.type === 'warning' ? 'bg-red-50 border-red-100 text-red-800' : 'bg-slate-50 border-slate-100 text-slate-700'}`}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest">{n.type === 'warning' ? '🚩 逾期警告' : '📧 系統提醒'}</span>
-                    <span className="text-[10px] text-slate-400">{n.time}</span>
-                  </div>
-                  <p className="text-xs font-medium">{n.message}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
